@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Click a picture!</title>
+	<style type="text/css">
+		body {
+			font-family: sans-serif;
+		}
+
+		h2,h3 {
+			margin-top: 0;
+		}
+
+		form {
+			margin-top: 15px;
+		}
+
+		form>input {
+			margin-right: 15px;
+		}
+
+		#results {
+			margin: 20px;
+			padding: 20px;
+			border: 1px solid;
+			background: white;
+		}
+	</style>
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+		integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+	<div id="results">Your captured image will appear here...</div>
+	<h1>This is a demo!</h1>
+	<div id="my_camera"></div>
+	<script type="text/javascript" src="{{ url_for('static', filename = 'webcam.js') }}"></script>
+	<script language="JavaScript">
+		Webcam.set({
+			width: 480,
+			height: 360,
+			image_format: 'jpeg',
+			jpeg_quality: 90
+		});
+		Webcam.attach('#my_camera');
+	</script>
+	<script language="JavaScript">
+
+
+		$("#my_camera").hide()
+
+		function dataURItoBlob(dataURI) {
+			// convert base64/URLEncoded data component to raw binary data held in a string
+			var byteString;
+			if (dataURI.split(',')[0].indexOf('base64') >= 0)
+				byteString = atob(dataURI.split(',')[1]);
+			else
+				byteString = unescape(dataURI.split(',')[1]);
+
+			// separate out the mime component
+			var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+			// write the bytes of the string to a typed array
+			var ia = new Uint8Array(byteString.length);
+			for (var i = 0; i < byteString.length; i++) {
+				ia[i] = byteString.charCodeAt(i);
+			}
+
+			return new Blob([ia], {type:mimeString});
+		}
+
+
+		window.setInterval(function () {
+			take_snapshot()
+		}, 1000/5);
+		function take_snapshot() {
+			Webcam.snap(function (data_uri) {
+				// document.getElementById('results').innerHTML =
+				// 	'<h2>Here is your image:</h2>' +
+				// 	'<img src="' + data_uri + '"/>';
+
+				var dataURI = data_uri;
+				var blob = dataURItoBlob(dataURI);
+				var formdata = new FormData(document.forms[0]);
+				formdata.append("canvasImage", blob);
+
+				$.ajax({
+					type: "POST",
+					data: formdata,
+					url: "/maskImage",
+					contentType: false,
+					processData: false,
+					success: function (data) {
+						//alert("hello"); // if it's failing on actual server check your server FIREWALL + SET UP CORS
+						bytestring = data['status']
+						image = bytestring.split('\'')[1]
+						$("#imagebox").attr('src' , 'data:image/jpeg;base64,'+image)
+					},
+					// error: function (jsonresult) {
+					// 	alert('There is some error from response from server!');
+					// }
+				});
+			});
+		}
+	</script>
+	<img id="imagebox" src="">
+</body>
+
+</html>
